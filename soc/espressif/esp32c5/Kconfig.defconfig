@@ -13,8 +13,9 @@ endchoice
 config NUM_IRQS
 	default 48
 
+# mcause.CODE is 6 bits wide on the HP core; bits 15:6 are reserved.
 config RISCV_MCAUSE_EXCEPTION_MASK
-	default 0xFFF
+	default 0x3F
 
 config RISCV_RESERVED_IRQ_ISR_TABLES_OFFSET
 	default 16
