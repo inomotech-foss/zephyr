@@ -19,6 +19,8 @@
 
 #define CSR_MTVT 0x307
 
+#define MTVEC_MODE_CLIC 3
+
 GTEXT(start_riscv)
 GTEXT(_vector_table)
 #ifdef CONFIG_INIT_STACKS
@@ -64,6 +66,10 @@ aa_loop:
 #endif /* CONFIG_INIT_STACKS */
 
 	la t0, _vector_table
+#if SOC_INT_CLIC_SUPPORTED
+	/* mtvec.MODE = CLIC. Read-only on the ESP32-C5, writable on other parts. */
+	ori t0, t0, MTVEC_MODE_CLIC
+#endif
 	csrw mtvec, t0
 
 #if SOC_INT_CLIC_SUPPORTED
