@@ -44,6 +44,7 @@ static struct modem_pipe *mock_pipe;
 #define MODEM_CHAT_UTEST_ON_SCRIPT_CALLBACK_BIT		 (9)
 #define MODEM_CHAT_UTEST_ON_CMGL_PARTIAL_CALLED_BIT	 (10)
 #define MODEM_CHAT_UTEST_ON_CMGL_PARTIAL_ANY_CALLED_BIT	 (11)
+#define MODEM_CHAT_UTEST_ON_MATCH_CALLBACK_BIT		 (12)
 
 static atomic_t callback_called;
 
@@ -233,6 +234,39 @@ MODEM_CHAT_SCRIPT_CMDS_DEFINE(
 );
 
 MODEM_CHAT_SCRIPT_DEFINE(script_echo, script_echo_cmds, abort_matches, on_script_result, 4);
+
+/*************************************************************************************************/
+/*                       Echo script releasing the instance from its callback                    */
+/*************************************************************************************************/
+static void on_script_result_release(struct modem_chat *cmd, enum modem_chat_script_result result,
+				     void *user_data)
+{
+	atomic_set_bit(&callback_called, MODEM_CHAT_UTEST_ON_SCRIPT_CALLBACK_BIT);
+	script_result = result;
+	modem_chat_release(cmd);
+}
+
+MODEM_CHAT_SCRIPT_DEFINE(script_echo_release, script_echo_cmds, abort_matches,
+			 on_script_result_release, 4);
+
+/*************************************************************************************************/
+/*                    Echo script releasing the instance from a match callback                   */
+/*************************************************************************************************/
+static void on_at_match_release(struct modem_chat *cmd, char **argv, uint16_t argc, void *user_data)
+{
+	atomic_set_bit(&callback_called, MODEM_CHAT_UTEST_ON_MATCH_CALLBACK_BIT);
+	modem_chat_release(cmd);
+}
+
+MODEM_CHAT_MATCH_DEFINE(at_match_release, "AT", "", on_at_match_release);
+
+MODEM_CHAT_SCRIPT_CMDS_DEFINE(
+	script_echo_release_match_cmds,
+	MODEM_CHAT_SCRIPT_CMD_RESP("AT", at_match_release),
+);
+
+MODEM_CHAT_SCRIPT_DEFINE(script_echo_release_match, script_echo_release_match_cmds, abort_matches,
+			 on_script_result, 4);
 
 /*************************************************************************************************/
 /*                                      Script responses                                         */
@@ -583,6 +617,47 @@ ZTEST(modem_chat, test_script_run_sync_abort)
 	modem_backend_mock_prime(&mock, &at_echo_error_transaction);
 	zassert_equal(modem_chat_run_script(&cmd, &script_echo), -EAGAIN,
 		      "Echo script should time out and return -EAGAIN");
+}
+
+ZTEST(modem_chat, test_release_from_script_callback)
+{
+	bool called;
+
+	modem_backend_mock_prime(&mock, &at_echo_transaction);
+	zassert_ok(modem_chat_run_script_async(&cmd, &script_echo_release),
+		   "Failed to start echo script");
+
+	k_msleep(100);
+
+	called = atomic_test_bit(&callback_called, MODEM_CHAT_UTEST_ON_SCRIPT_CALLBACK_BIT);
+	zassert_true(called == true, "Script callback should have been called");
+	zassert_equal(script_result, MODEM_CHAT_SCRIPT_RESULT_SUCCESS,
+		      "Script should have stopped with success");
+	zassert_false(modem_chat_is_running(&cmd), "Script should no longer be running");
+
+	/* The work queue must still be usable after the release. */
+	zassert_ok(modem_chat_attach(&cmd, mock_pipe), "Failed to reattach pipe mock");
+	modem_backend_mock_prime(&mock, &at_echo_transaction);
+	zassert_ok(modem_chat_run_script(&cmd, &script_echo), "Failed to run echo script");
+}
+
+ZTEST(modem_chat, test_release_from_match_callback)
+{
+	bool called;
+
+	modem_backend_mock_prime(&mock, &at_echo_transaction);
+	zassert_ok(modem_chat_run_script_async(&cmd, &script_echo_release_match),
+		   "Failed to start echo script");
+
+	k_msleep(100);
+
+	called = atomic_test_bit(&callback_called, MODEM_CHAT_UTEST_ON_MATCH_CALLBACK_BIT);
+	zassert_true(called == true, "Match callback should have been called");
+	zassert_false(modem_chat_is_running(&cmd), "Script should no longer be running");
+
+	zassert_ok(modem_chat_attach(&cmd, mock_pipe), "Failed to reattach pipe mock");
+	modem_backend_mock_prime(&mock, &at_echo_transaction);
+	zassert_ok(modem_chat_run_script(&cmd, &script_echo), "Failed to run echo script");
 }
 
 ZTEST(modem_chat, test_script_run_dynamic_script_sync)
