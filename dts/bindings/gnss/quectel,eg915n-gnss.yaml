@@ -1,0 +1,43 @@
+# Copyright (c) 2026 INOMO Technologies AG
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  GNSS receiver integrated in the Quectel EG915N modem.
+
+  This node must be a child of the modem node. The modem only emits NMEA
+  sentences on its USB or debug UART port, so the driver instead polls the
+  modem for positions over one of the modem's CMUX channels and needs no UART
+  of its own.
+
+  Example:
+
+    &uart1 {
+            modem: modem {
+                    compatible = "quectel,eg915n";
+                    mdm-power-gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
+
+                    gnss: gnss {
+                            compatible = "quectel,eg915n-gnss";
+                    };
+            };
+    };
+
+compatible: "quectel,eg915n-gnss"
+
+include: base.yaml
+
+properties:
+  modem-pipe-name:
+    type: string
+    default: "gnss_pipe"
+    description: |
+      Name of the modem pipe the driver sends AT commands on. Must match one of
+      the pipe names defined by the parent modem driver.
+
+  fix-rate:
+    type: int
+    default: 1000
+    description: |
+      Interval in milliseconds between position polls. The modem updates its
+      position once per second, so shorter intervals report the same position
+      more than once. May be changed at runtime through the GNSS API.
