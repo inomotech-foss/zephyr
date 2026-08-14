@@ -107,6 +107,17 @@ test_quectel_eg25_g: quectel_eg25_g {
 	mdm-reset-gpios = <&test_gpio 0 0>;
 };
 
+test_quectel_eg915n: quectel_eg915n {
+	compatible = "quectel,eg915n";
+
+	mdm-power-gpios = <&test_gpio 0 0>;
+
+	test_quectel_eg915n_gnss: gnss {
+		compatible = "quectel,eg915n-gnss";
+		fix-rate = <1000>;
+	};
+};
+
 test_telit_me910g1: telit_me910g1 {
 	compatible = "telit,me910g1";
 

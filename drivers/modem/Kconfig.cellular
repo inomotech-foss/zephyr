@@ -25,8 +25,9 @@ config MODEM_CELLULAR
 		DT_HAS_TELIT_LE910C1TX_ENABLED || DT_HAS_TELIT_LEX10Q1_ENABLED || \
 		DT_HAS_SQN_GM02S_ENABLED || DT_HAS_QUECTEL_EG800Q_ENABLED || \
 		DT_HAS_SIMCOM_A76XX_ENABLED || DT_HAS_FIBOCOM_LE250_ENABLED || \
-		DT_HAS_TRASNA_LEXI_R10_ENABLED || DT_HAS_QUECTEL_EG915U_ENABLED || \
-		DT_HAS_NORDIC_NRF93M1_ENABLED || DT_HAS_NORDIC_NRF91_SM_V2_ENABLED)
+		DT_HAS_TRASNA_LEXI_R10_ENABLED || DT_HAS_QUECTEL_EG915N_ENABLED || \
+		DT_HAS_QUECTEL_EG915U_ENABLED || DT_HAS_NORDIC_NRF93M1_ENABLED || \
+		DT_HAS_NORDIC_NRF91_SM_V2_ENABLED)
 	help
 	  This driver uses the generic 3gpp AT commands, along
 	  with the standard protocols CMUX and PPP, to configure
@@ -77,7 +78,12 @@ config MODEM_CELLULAR_CHAT_BUFFER_SIZE
 
 config MODEM_CELLULAR_USER_PIPE_BUFFER_SIZES
 	int "The size of the buffers used for each user pipe in bytes."
+	default 512 if DT_HAS_QUECTEL_EG915N_ENABLED
 	default 128
+	help
+	  Ring buffer for received CMUX frames on each user pipe. Size it for
+	  several MODEM_CMUX_MTU frames, or it overruns before the application
+	  reads them.
 
 config MODEM_CMUX_WORK_BUFFER_SIZE_EXTRA
 	default 256 if DT_HAS_TELIT_LE910C1TX_ENABLED

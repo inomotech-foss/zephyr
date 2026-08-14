@@ -1,0 +1,13 @@
+# Copyright (c) 2026 INOMO Technologies AG
+# SPDX-License-Identifier: Apache-2.0
+
+description: Quectel EG915N modem
+
+compatible: "quectel,eg915n"
+
+include: zephyr,cellular-modem-device.yaml
+
+properties:
+  mdm-power-gpios:
+    type: phandle-array
+    required: true
