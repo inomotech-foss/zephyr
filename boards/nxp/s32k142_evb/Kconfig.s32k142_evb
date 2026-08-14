@@ -1,0 +1,6 @@
+# Copyright 2023 NXP
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_S32K142_EVB
+	select SOC_S32K142
+	select SOC_PART_NUMBER_FS32K142UAT0VLLT

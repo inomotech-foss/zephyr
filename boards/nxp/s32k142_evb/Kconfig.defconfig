@@ -1,0 +1,13 @@
+# Copyright 2023 NXP
+# SPDX-License-Identifier: Apache-2.0
+
+if BOARD_S32K142_EVB
+
+if SERIAL
+
+config UART_CONSOLE
+	default y
+
+endif # SERIAL
+
+endif # BOARD_S32K142_EVB

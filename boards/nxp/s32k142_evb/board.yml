@@ -1,0 +1,6 @@
+board:
+  name: s32k142_evb
+  full_name: S32K142EVB-Q100
+  vendor: nxp
+  socs:
+  - name: s32k142
