@@ -68,8 +68,18 @@ static int nxp_s32_clock_init(const struct device *dev)
 	Clock_Ip_StatusType status;
 
 	status = Clock_Ip_Init(&Clock_Ip_aClockConfig[NXP_S32_CLOCK_CONFIG_IDX]);
+	if (status != CLOCK_IP_SUCCESS) {
+		return -EIO;
+	}
 
-	return (status == CLOCK_IP_SUCCESS ? 0 : -EIO);
+	/* Clock_Ip_Init defers gate and selector setup when the clock tree is
+	 * sourced from a PLL, and has already waited for lock.
+	 */
+	if (Clock_Ip_GetPllStatus() == CLOCK_IP_PLL_LOCKED) {
+		Clock_Ip_DistributePll();
+	}
+
+	return 0;
 }
 
 static DEVICE_API(clock_control, nxp_s32_clock_driver_api) = {
