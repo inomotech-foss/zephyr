@@ -44,16 +44,20 @@ static void at_shell_print_match(struct modem_chat *chat, char **argv, uint16_t 
 		return;
 	}
 
-	if (argc != 1) {
-		return;
+	/* Match is argv[0], remainder argv[1]: "+CME ERROR: 516" spans both. */
+	if (argc == 1) {
+		shell_print(at_shell_active_shell, "%s", argv[0]);
+	} else if (argc == 2) {
+		shell_print(at_shell_active_shell, "%s%s", argv[0], argv[1]);
 	}
-
-	shell_print(at_shell_active_shell, "%s", argv[0]);
 }
 
+/* "ERROR" does not prefix the extended errors, which would else run to timeout. */
 MODEM_CHAT_MATCHES_DEFINE(
 	at_shell_abort_matches,
 	MODEM_CHAT_MATCH("ERROR", "", at_shell_print_match),
+	MODEM_CHAT_MATCH("+CME ERROR", "", at_shell_print_match),
+	MODEM_CHAT_MATCH("+CMS ERROR", "", at_shell_print_match),
 );
 
 static void at_shell_script_callback(struct modem_chat *chat,
