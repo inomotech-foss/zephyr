@@ -1,0 +1,11 @@
+tests:
+  drivers.gnss.shell:
+    platform_allow:
+      - native_sim
+      - qemu_x86
+    integration_platforms:
+      - native_sim
+    tags:
+      - drivers
+      - gnss
+      - shell

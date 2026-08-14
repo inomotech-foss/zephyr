@@ -16,6 +16,7 @@ zephyr_library_sources_ifdef(CONFIG_GNSS_NMEA_GENERIC gnss_nmea_generic.c)
 zephyr_library_sources_ifdef(CONFIG_GNSS_PARSE gnss_parse.c)
 zephyr_library_sources_ifdef(CONFIG_GNSS_QUECTEL_EG915N gnss_quectel_eg915n.c gnss_quectel_eg915n_parse.c)
 zephyr_library_sources_ifdef(CONFIG_GNSS_QUECTEL_LCX6G gnss_quectel_lcx6g.c)
+zephyr_library_sources_ifdef(CONFIG_GNSS_SHELL gnss_shell.c)
 # zephyr-keep-sorted-stop
 
 add_subdirectory(u_blox)

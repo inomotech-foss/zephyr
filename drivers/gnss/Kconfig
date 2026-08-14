@@ -36,6 +36,39 @@ config GNSS_DUMP_TO_LOG_BUF_SIZE
 
 endif
 
+config GNSS_SHELL
+	bool "GNSS shell"
+	depends on SHELL
+	help
+	  Enable the gnss shell command.
+
+if GNSS_SHELL
+
+config GNSS_SHELL_MONITOR
+	bool "Print published GNSS data from the shell"
+	depends on LOG
+	default y
+	select GNSS_DUMP
+	help
+	  Enable the gnss monitor subcommand. GNSS_DUMP formats the output and
+	  depends on LOG.
+
+config GNSS_SHELL_MONITOR_BUF_SIZE
+	int "GNSS shell monitor buffer size"
+	depends on GNSS_SHELL_MONITOR
+	default 128
+	help
+	  Size of the buffer each dumped line is formatted into.
+
+config GNSS_SHELL_MONITOR_SATELLITES_COUNT
+	int "Maximum satellite count reported by the monitor"
+	depends on GNSS_SHELL_MONITOR && GNSS_SATELLITES
+	default 24
+	help
+	  Satellites published beyond this count are not printed.
+
+endif # GNSS_SHELL
+
 config GNSS_PARSE
 	bool "GNSS parsing utilities"
 	help

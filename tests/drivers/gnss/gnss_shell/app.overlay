@@ -1,0 +1,12 @@
+/*
+ * Copyright (c) 2026 INOMO Technologies AG
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	gnss: gnss_emul {
+		compatible = "zephyr,gnss-emul";
+		status = "okay";
+	};
+};
