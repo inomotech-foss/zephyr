@@ -1,0 +1,9 @@
+# Copyright (c) 2026 INOMO Technologies AG
+# SPDX-License-Identifier: Apache-2.0
+
+tests:
+  drivers.gnss.gnss_quectel_eg915n:
+    tags:
+      - drivers
+      - gnss
+      - parse
