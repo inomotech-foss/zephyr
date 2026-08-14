@@ -546,6 +546,9 @@ void modem_chat_script_abort(struct modem_chat *chat);
 /**
  * @brief Release pipe from chat instance
  * @param chat Chat instance
+ *
+ * @note May be called from a match or script callback. Data still buffered in
+ * the pipe is dropped.
  */
 void modem_chat_release(struct modem_chat *chat);
 

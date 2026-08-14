@@ -113,22 +113,21 @@ static void modem_chat_log_received_command(struct modem_chat *chat)
 
 static void modem_chat_script_stop(struct modem_chat *chat, enum modem_chat_script_result result)
 {
+	const struct modem_chat_script *script;
+
 	if ((chat == NULL) || (chat->script == NULL)) {
 		return;
 	}
 
+	script = chat->script;
+
 	/* Handle result */
 	if (result == MODEM_CHAT_SCRIPT_RESULT_SUCCESS) {
-		LOG_DBG("%s: complete", chat->script->name);
+		LOG_DBG("%s: complete", script->name);
 	} else if (result == MODEM_CHAT_SCRIPT_RESULT_ABORT) {
-		LOG_WRN("%s: aborted", chat->script->name);
+		LOG_WRN("%s: aborted", script->name);
 	} else {
-		LOG_WRN("%s: timed out", chat->script->name);
-	}
-
-	/* Call back with result */
-	if (chat->script->callback != NULL) {
-		chat->script->callback(chat, result, chat->user_data);
+		LOG_WRN("%s: timed out", script->name);
 	}
 
 	/* Clear parse_match in case it is stored in the script being stopped */
@@ -138,9 +137,6 @@ static void modem_chat_script_stop(struct modem_chat *chat, enum modem_chat_scri
 		chat->parse_match = NULL;
 		chat->parse_match_len = 0;
 	}
-
-	/* Clear reference to script */
-	chat->script = NULL;
 
 	/* Clear response and abort commands */
 	chat->matches[MODEM_CHAT_MATCHES_INDEX_ABORT] = NULL;
@@ -153,14 +149,26 @@ static void modem_chat_script_stop(struct modem_chat *chat, enum modem_chat_scri
 	k_work_cancel(&chat->script_send_work);
 	k_work_cancel_delayable(&chat->script_send_timeout_work);
 
+	/* Store result of script for script stopped indication */
+	chat->script_result = result;
+
 	/* Clear script running state */
 	atomic_clear_bit(&chat->script_state, MODEM_CHAT_SCRIPT_STATE_RUNNING_BIT);
 
-	/* Store result of script for script stoppted indication */
-	chat->script_result = result;
-
 	/* Indicate script stopped */
 	k_sem_give(&chat->script_stopped_sem);
+
+	/* Call back last so it can release the instance or start another script.
+	 * Keep chat->script set: modem_chat_callback_script_chat() reads it.
+	 */
+	if (script->callback != NULL) {
+		script->callback(chat, result, chat->user_data);
+	}
+
+	/* Clear reference to script, unless the callback replaced or cleared it */
+	if (chat->script == script) {
+		chat->script = NULL;
+	}
 }
 
 static void modem_chat_set_script_send_state(struct modem_chat *chat,
@@ -566,6 +574,11 @@ static void modem_chat_on_command_received_resp(struct modem_chat *chat)
 		chat->parse_match->callback(chat, (char **)chat->argv, chat->argc, chat->user_data);
 	}
 
+	/* Released from the callback, clearing parse_match and script */
+	if (chat->pipe == NULL) {
+		return;
+	}
+
 	/* Validate response command is not partial */
 	if (chat->parse_match->partial) {
 		return;
@@ -758,6 +771,11 @@ static bool modem_chat_discard_byte(struct modem_chat *chat, uint8_t byte)
 static void modem_chat_process_bytes(struct modem_chat *chat)
 {
 	for (uint16_t i = 0; i < chat->work_buf_len; i++) {
+		/* Stop if a match or script callback released the chat instance */
+		if (chat->pipe == NULL) {
+			return;
+		}
+
 		if (modem_chat_discard_byte(chat, chat->work_buf[i])) {
 			continue;
 		}
@@ -801,6 +819,14 @@ static void modem_chat_process_handler(struct k_work *item)
 
 	/* Process data */
 	modem_chat_process_bytes(chat);
+
+	/* Do not resubmit if a callback released the chat instance, as this
+	 * handler would then run against a detached pipe
+	 */
+	if (chat->pipe == NULL) {
+		return;
+	}
+
 	modem_work_submit(&chat->receive_work);
 }
 
@@ -981,12 +1007,24 @@ void modem_chat_release(struct modem_chat *chat)
 		modem_pipe_release(chat->pipe);
 	}
 
-	k_work_cancel_sync(&chat->script_run_work, &sync);
-	k_work_cancel_sync(&chat->script_abort_work, &sync);
-	k_work_cancel_sync(&chat->receive_work, &sync);
-	k_work_cancel_sync(&chat->script_send_work, &sync);
-
+	/* Detach first, so a handler running right now bails out early. */
 	chat->pipe = NULL;
+
+	/* k_work_cancel_sync() deadlocks on the work item calling us. The queue is
+	 * single threaded, so the async cancel is enough from the queue thread.
+	 */
+	if (modem_work_is_wq_thread()) {
+		k_work_cancel(&chat->script_run_work);
+		k_work_cancel(&chat->script_abort_work);
+		k_work_cancel(&chat->receive_work);
+		k_work_cancel(&chat->script_send_work);
+	} else {
+		k_work_cancel_sync(&chat->script_run_work, &sync);
+		k_work_cancel_sync(&chat->script_abort_work, &sync);
+		k_work_cancel_sync(&chat->receive_work, &sync);
+		k_work_cancel_sync(&chat->script_send_work, &sync);
+	}
+
 	chat->receive_buf_len = 0;
 	chat->work_buf_len = 0;
 	chat->argc = 0;

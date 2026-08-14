@@ -23,6 +23,9 @@ int modem_work_submit(struct k_work *work);
 int modem_work_schedule(struct k_work_delayable *dwork, k_timeout_t delay);
 int modem_work_reschedule(struct k_work_delayable *dwork, k_timeout_t delay);
 
+/* k_work_cancel_sync() and friends deadlock when called from this thread. */
+bool modem_work_is_wq_thread(void);
+
 #else
 
 static inline int modem_work_submit(struct k_work *work)
@@ -38,6 +41,11 @@ static inline int modem_work_schedule(struct k_work_delayable *dwork, k_timeout_
 static inline int modem_work_reschedule(struct k_work_delayable *dwork, k_timeout_t delay)
 {
 	return k_work_reschedule(dwork, delay);
+}
+
+static inline bool modem_work_is_wq_thread(void)
+{
+	return k_current_get() == k_work_queue_thread_get(&k_sys_work_q);
 }
 
 #endif /* CONFIG_MODEM_DEDICATED_WORKQUEUE */

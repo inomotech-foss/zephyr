@@ -26,6 +26,11 @@ int modem_work_reschedule(struct k_work_delayable *dwork, k_timeout_t delay)
 	return k_work_reschedule_for_queue(&modem_work_q, dwork, delay);
 }
 
+bool modem_work_is_wq_thread(void)
+{
+	return k_current_get() == k_work_queue_thread_get(&modem_work_q);
+}
+
 static int modem_work_q_init(void)
 {
 	/* Boot the dedicated workqueue */
